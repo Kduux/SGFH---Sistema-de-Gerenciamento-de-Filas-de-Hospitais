@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Atendente – SGFH</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    :root { --azul: #1a6fc4; }
+    body { background: #f0f4f8; }
+    .navbar { background: var(--azul); }
+    .senha-atual { font-size: 5rem; font-weight: 900; color: var(--azul); }
+    .btn-primary { background: var(--azul); border-color: var(--azul); }
+    .card { border: none; border-radius: .75rem; }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar navbar-dark px-4">
+    <span class="navbar-brand fw-bold">SGFH</span>
+    <div class="d-flex align-items-center gap-3 text-white small">
+      <span>{{ nome }} &nbsp;|&nbsp; Guichê {{ guiche }}</span>
+      <a href="/painel" class="btn btn-outline-light btn-sm" target="_blank">Painel TV</a>
+      <a href="/logout" class="btn btn-outline-light btn-sm">Sair</a>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="row g-4">
+
+      <!-- Senha atual -->
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm p-4 text-center h-100">
+          <p class="text-muted mb-1 fw-semibold">Atendendo agora</p>
+          <div class="senha-atual" id="senhaAtual">—</div>
+          <p class="text-muted small mt-1" id="tipoAtual"></p>
+        </div>
+      </div>
+
+      <!-- Ação -->
+      <div class="col-12 col-md-6 d-flex flex-column gap-3">
+        <div class="card shadow-sm p-4 text-center">
+          <p class="text-muted mb-3">Clique para chamar a próxima senha</p>
+          <button class="btn btn-primary btn-lg w-100" onclick="chamarProximo()">
+            CHAMAR PRÓXIMO
+          </button>
+          <p class="text-muted small mt-2" id="msgFila"></p>
+        </div>
+
+        <!-- Histórico -->
+        <div class="card shadow-sm p-4">
+          <p class="fw-semibold text-muted small mb-2">ÚLTIMAS CHAMADAS</p>
+          <div id="historico"><p class="text-muted small mb-0">Nenhuma ainda.</p></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    async function chamarProximo() {
+      const resp = await fetch('/chamar_proximo', { method: 'POST' });
+      const data = await resp.json();
+
+      document.getElementById('senhaAtual').textContent = data.senha ?? '—';
+      document.getElementById('tipoAtual').textContent  = data.senha
+        ? (data.tipo === 'prioritario' ? '⚠ Prioritário' : '● Normal')
+        : '';
+      document.getElementById('msgFila').textContent = data.senha ? '' : 'Fila vazia no momento.';
+      atualizarHistorico();
+    }
+
+    async function atualizarHistorico() {
+      const resp = await fetch('/api/painel');
+      const data = await resp.json();
+      const el   = document.getElementById('historico');
+
+      if (data.historico.length === 0) {
+        el.innerHTML = '<p class="text-muted small mb-0">Nenhuma ainda.</p>';
+      } else {
+        el.innerHTML = data.historico.map(s =>
+          `<div class="d-flex justify-content-between border-bottom py-1">
+             <span class="fw-bold">${s.valor}</span>
+             <span class="text-muted small">Guichê ${s.guiche ?? '–'}</span>
+           </div>`
+        ).join('');
+      }
+    }
+
+    atualizarHistorico();
+    setInterval(atualizarHistorico, 5000);
+  </script>
+</body>
+</html>

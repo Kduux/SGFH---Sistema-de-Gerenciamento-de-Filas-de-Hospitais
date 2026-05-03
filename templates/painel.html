@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Atendimento – SGFH</title>
+  <style>
+    :root { --azul: #1a6fc4; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #0d1b2e;
+      color: white;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #112240;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--azul);
+    }
+    header .brand { font-weight: 700; letter-spacing: .05em; }
+    header .clock { font-size: 1.4rem; font-weight: 600; }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 300px;
+    }
+
+    /* Senha atual */
+    .col-atual {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-right: 1px solid #1e3a5f;
+      padding: 2rem;
+      text-align: center;
+    }
+    .label { font-size: .8rem; text-transform: uppercase; letter-spacing: .2em; color: #6b8cba; margin-bottom: .5rem; }
+    .senha-num {
+      font-size: clamp(5rem, 16vw, 10rem);
+      font-weight: 900;
+      letter-spacing: .06em;
+      color: var(--azul);
+      line-height: 1;
+    }
+    .senha-num.vazia  { color: #1e3a5f; }
+    .senha-num.prior  { color: #dc3545; }
+    .guiche-txt { font-size: 1.6rem; color: #6b8cba; margin-top: 1rem; }
+    .guiche-txt strong { color: white; }
+
+    /* Histórico */
+    .col-hist {
+      background: #112240;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .hist-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .2em; color: #6b8cba; margin-bottom: 1rem; }
+    .hist-item {
+      background: #1a3258;
+      border-radius: .5rem;
+      padding: .8rem 1rem;
+      margin-bottom: .6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hist-item .senha { font-size: 1.6rem; font-weight: 800; color: #a0b8d8; }
+    .hist-item .gc    { font-size: .8rem; color: #6b8cba; }
+    .hist-vazia { color: #2a4a72; font-size: .9rem; text-align: center; margin-top: 2rem; }
+
+    footer {
+      background: #112240;
+      text-align: center;
+      padding: .5rem;
+      font-size: .7rem;
+      color: #2a4a72;
+      letter-spacing: .1em;
+      border-top: 1px solid #1e3a5f;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="brand">SGFH – Painel de Atendimento</span>
+    <span class="clock" id="clock">--:--:--</span>
+  </header>
+
+  <main>
+    <div class="col-atual">
+      <p class="label">Senha em atendimento</p>
+      <div class="senha-num vazia" id="senhaEl">—</div>
+      <div class="guiche-txt" id="guicheEl" style="display:none">
+        Guichê <strong id="guicheNum">—</strong>
+      </div>
+    </div>
+
+    <div class="col-hist">
+      <p class="hist-title">Últimas chamadas</p>
+      <div id="historico">
+        <p class="hist-vazia">Nenhuma chamada ainda.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>SISTEMA DE GESTÃO DE FILAS DE HOSPITAL &nbsp;•&nbsp; SGFH</footer>
+
+  <script>
+    // Relógio
+    setInterval(() => {
+      document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-BR');
+    }, 1000);
+
+    let ultimaSenha = null;
+
+    async function atualizar() {
+      const resp = await fetch('/api/painel');
+      const data = await resp.json();
+
+      const senhaEl  = document.getElementById('senhaEl');
+      const guicheEl = document.getElementById('guicheEl');
+      const histEl   = document.getElementById('historico');
+
+      if (data.atual) {
+        senhaEl.textContent  = data.atual.valor;
+        senhaEl.className    = 'senha-num' + (data.atual.tipo === 'prioritario' ? ' prior' : '');
+        guicheEl.style.display = '';
+        document.getElementById('guicheNum').textContent = data.atual.guiche;
+      } else {
+        senhaEl.textContent    = '—';
+        senhaEl.className      = 'senha-num vazia';
+        guicheEl.style.display = 'none';
+      }
+
+      histEl.innerHTML = data.historico.length
+        ? data.historico.map(s =>
+            `<div class="hist-item">
+               <span class="senha">${s.valor}</span>
+               <span class="gc">Guichê ${s.guiche ?? '–'}</span>
+             </div>`
+          ).join('')
+        : '<p class="hist-vazia">Nenhuma chamada ainda.</p>';
+    }
+
+    atualizar();
+    setInterval(atualizar, 3000);
+  </script>
+</body>
+</html>
